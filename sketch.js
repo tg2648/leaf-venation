@@ -2,22 +2,21 @@ const WIDTH = 400;
 const HEIGHT = 600;
 const BACKGROUND_COLOR = "olivedrab";
 const LEAF_COLOR = "darkgreen";
-const VEIN_RADIUS = 3;
+const VEIN_RADIUS = 2;
 const VEIN_COLOR = "limegreen";
 const VEIN_CORE_COLOR = "limegreen";
-const AUXIN_COUNT = 1;
-const AUXIN_RADIUS = 3;
+const AUXIN_COUNT = 3;
+const AUXIN_RADIUS = 2;
 const AUXIN_COLOR = "red";
-const AUXIN_REMOVAL_RADIUS = 40;
-const ARROW_SIZE = 7;
+const AUXIN_REMOVAL_RADIUS = 20;
 
 let veins = [];
 let auxins = [];
-let to_remove = [];
+let toRemove = [];
 let showClosest = false;
 let showDirection = false;
 let showRemovalRadius = false;
-let showAuxins = false;
+let showAuxins = true;
 let leaf = {
   // bezier curve points:
   x1: WIDTH / 2,
@@ -63,12 +62,6 @@ function drawLine(v1, v2, color, thickness, drawArrow) {
   stroke(color);
   strokeWeight(thickness);
   line(v1.x, v1.y, v2.x, v2.y);
-
-  // if (drawArrow) {
-  //     rotate(v2.heading());
-  //     // translate(v2.mag() - ARROW_SIZE, 0);
-  //     triangle(v2.x - ARROW_SIZE, v2.y, v2.x, v2.y + ARROW_SIZE / 2, v2.x + ARROW_SIZE, v2.y);
-  // }
   pop();
 }
 
@@ -91,12 +84,19 @@ function drawLeaf(drawPolygon) {
   if (drawPolygon) {
     push();
     noFill();
-    stroke("red");
+    stroke("blue");
     beginShape();
     for (let p of leaf.vertices) {
       vertex(p.x, p.y);
     }
     endShape(CLOSE);
+
+    for (let [i, p] of leaf.vertices.entries()) {
+      strokeWeight(5);
+      point(p.x, p.y);
+      strokeWeight(1);
+      text(i, p.x, p.y);
+    }
     pop();
   }
 }
@@ -106,22 +106,63 @@ function purgeAuxins() {
   auxins.forEach((auxin, index) => {
     for (const vein of veins) {
       if (auxin.dist(vein.position) < AUXIN_REMOVAL_RADIUS) {
-        to_remove.push(index);
+        toRemove.push(index);
         break;
       }
     }
   });
 
-  auxins = auxins.filter((_, index) => !to_remove.includes(index));
-  to_remove = [];
+  auxins = auxins.filter((_, index) => !toRemove.includes(index));
+  toRemove = [];
+}
+
+function isInsideLeaf(x, y) {
+  // https://stackoverflow.com/a/34689268
+  let pos = 0;
+  let neg = 0;
+
+  for (let i = 0; i < leaf.vertices.length; i++) {
+    // Point is the same as one of the vertices
+    if (x === leaf.vertices[i].x && y === leaf.vertices[i].y) {
+      return true;
+    }
+
+    // Form a segment between the i'th point
+    const x1 = leaf.vertices[i].x;
+    const y1 = leaf.vertices[i].y;
+
+    // And the i+1'th, or if i is the last, with the first point
+    const i2 = (i + 1) % leaf.vertices.length;
+    const x2 = leaf.vertices[i2].x;
+    const y2 = leaf.vertices[i2].y;
+
+    // Compute cross product
+    const d = (x - x1) * (y2 - y1) - (y - y1) * (x2 - x1);
+    if (d > 0) pos++;
+    if (d < 0) neg++;
+
+    // If the sign changes, then point is outside
+    if (pos > 0 && neg > 0) {
+      return false;
+    }
+  }
+
+  // If no change in direction, then on same side of all segments, and thus inside
+  return true;
 }
 
 function addAuxins() {
-  for (let i = 0; i < AUXIN_COUNT; i++) {
+  let auxinsAdded = 0;
+  while (auxinsAdded < AUXIN_COUNT) {
     let x = random(0, WIDTH);
     let y = random(0, HEIGHT);
-    let a = createVector(x, y);
-    auxins.push(a);
+
+    if (isInsideLeaf(x, y)) {
+      // if (true) {
+      let a = createVector(x, y);
+      auxins.push(a);
+      auxinsAdded++;
+    }
   }
 }
 
@@ -132,16 +173,16 @@ function calculateClosestVeins() {
     vein.auxins = [];
   });
   auxins.forEach((auxin) => {
-    let closest_index = 0;
+    let closestIndex = 0;
     for (let index = 1; index < veins.length; index++) {
       let a = veins[index];
-      let b = veins[closest_index];
+      let b = veins[closestIndex];
       if (a.position.dist(auxin) < b.position.dist(auxin)) {
-        closest_index = index;
+        closestIndex = index;
       }
     }
 
-    veins[closest_index].auxins.push(auxin);
+    veins[closestIndex].auxins.push(auxin);
   });
 }
 
@@ -158,8 +199,7 @@ function calculateDirection() {
 }
 
 function growVeins() {
-  // Grow veins in the direction in which they are being
-  // pulled by the auxins
+  // Grow veins in the direction in which they are being pulled by the auxins
   let newVeins = [];
   veins.forEach((vein) => {
     if (vein.direction.mag() > 0) {
@@ -190,7 +230,6 @@ function keyPressed() {
   }
 
   if (key === "c") {
-    calculateClosestVeins();
     showClosest = !showClosest;
   }
   if (key === "r") {
@@ -200,18 +239,13 @@ function keyPressed() {
     showAuxins = !showAuxins;
   }
   if (key === "n") {
-    calculateDirection();
     showDirection = !showDirection;
   }
 
   return false;
 }
 function setup() {
-  let origin = createVector(WIDTH / 2, (HEIGHT * 7) / 8);
-  veins.push(new Vein(origin));
-  addAuxins();
-
-  let numVertices = 50;
+  let numVertices = 30;
   let delta = 1 / numVertices;
   t = 0;
   for (let i = 0; i < numVertices; i++) {
@@ -221,6 +255,8 @@ function setup() {
     leaf.vertices.push({ x, y });
   }
 
+  let origin = createVector(WIDTH / 2, (HEIGHT * 7) / 8);
+  veins.push(new Vein(origin));
   createCanvas(WIDTH, HEIGHT);
 }
 
