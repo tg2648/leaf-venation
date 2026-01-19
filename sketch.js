@@ -19,222 +19,245 @@ let showDirection = false;
 let showRemovalRadius = false;
 let showAuxins = false;
 let leaf = {
-    // bezier curve points:
-    x1: WIDTH / 2,
-    y1: HEIGHT * 0.03,
-    x2: -300,
-    y2: HEIGHT + 150,
-    x3: WIDTH + 300,
-    y3: HEIGHT + 150,
-    x4: WIDTH / 2,
-    y4: HEIGHT * 0.03,
-    vertices: [],  // approximation of the bezier curve using a polygon
-}
+  // bezier curve points:
+  x1: WIDTH / 2,
+  y1: HEIGHT * 0.03,
+  x2: -300,
+  y2: HEIGHT + 150,
+  x3: WIDTH + 300,
+  y3: HEIGHT + 150,
+  x4: WIDTH / 2,
+  y4: HEIGHT * 0.03,
+  vertices: [], // approximation of the bezier curve using a polygon
+};
 
 class Vein {
-    constructor(position) {
-        this.position = position;
-        this.auxins = []; // which auxins influence the vein
-        this.direction = createVector(0, 0); // normalized sum of vectors to each auxin that influences it
-    }
+  constructor(position) {
+    this.position = position;
+    this.auxins = []; // which auxins influence the vein
+    this.direction = createVector(0, 0); // normalized sum of vectors to each auxin that influences it
+  }
 }
 
 function drawCircle(x, y, radius, color) {
-    push();
-    fill(color);
-    stroke(color);
-    circle(x, y, radius * 2);
-    pop();
+  push();
+  fill(color);
+  stroke(color);
+  circle(x, y, radius * 2);
+  pop();
 }
 
 function drawRing(x, y, radius, color, thickness) {
-    push();
-    fill(0, 0, 0, 1);
-    stroke(color);
-    strokeWeight(thickness);
-    circle(x, y, radius * 2);
-    pop();
+  push();
+  fill(0, 0, 0, 1);
+  stroke(color);
+  strokeWeight(thickness);
+  circle(x, y, radius * 2);
+  pop();
 }
 
 function drawLine(v1, v2, color, thickness, drawArrow) {
-    // Draw a line between two vectors v1 and v2
-    push();
-    fill(color);
-    stroke(color);
-    strokeWeight(thickness);
-    line(v1.x, v1.y, v2.x, v2.y);
+  // Draw a line between two vectors v1 and v2
+  push();
+  fill(color);
+  stroke(color);
+  strokeWeight(thickness);
+  line(v1.x, v1.y, v2.x, v2.y);
 
-    // if (drawArrow) {
-    //     rotate(v2.heading());
-    //     // translate(v2.mag() - ARROW_SIZE, 0);
-    //     triangle(v2.x - ARROW_SIZE, v2.y, v2.x, v2.y + ARROW_SIZE / 2, v2.x + ARROW_SIZE, v2.y);
-    // }
-    pop();
+  // if (drawArrow) {
+  //     rotate(v2.heading());
+  //     // translate(v2.mag() - ARROW_SIZE, 0);
+  //     triangle(v2.x - ARROW_SIZE, v2.y, v2.x, v2.y + ARROW_SIZE / 2, v2.x + ARROW_SIZE, v2.y);
+  // }
+  pop();
 }
 
 function drawLeaf(drawPolygon) {
-    push();
-    fill(LEAF_COLOR);
-    stroke(LEAF_COLOR);
-    bezier(leaf.x1, leaf.y1, leaf.x2, leaf.y2, leaf.x3, leaf.y3, leaf.x4, leaf.y4);
-    pop();
+  push();
+  fill(LEAF_COLOR);
+  stroke(LEAF_COLOR);
+  bezier(
+    leaf.x1,
+    leaf.y1,
+    leaf.x2,
+    leaf.y2,
+    leaf.x3,
+    leaf.y3,
+    leaf.x4,
+    leaf.y4,
+  );
+  pop();
 
-    if (drawPolygon) {
-        push();
-        noFill();
-        stroke("red");
-        beginShape();
-        for (let p of leaf.vertices) {
-            vertex(p.x, p.y);
-        }
-        endShape(CLOSE);
-        pop();
+  if (drawPolygon) {
+    push();
+    noFill();
+    stroke("red");
+    beginShape();
+    for (let p of leaf.vertices) {
+      vertex(p.x, p.y);
     }
+    endShape(CLOSE);
+    pop();
+  }
 }
 
 function purgeAuxins() {
-    // Remove any auxins that are within AUXIN_REMOVAL_RADIUS of any vein
-    auxins.forEach((auxin, index) => {
-        for (const vein of veins) {
-            if (auxin.dist(vein.position) < AUXIN_REMOVAL_RADIUS) {
-                to_remove.push(index);
-                break;
-            }
-        }
-    });
+  // Remove any auxins that are within AUXIN_REMOVAL_RADIUS of any vein
+  auxins.forEach((auxin, index) => {
+    for (const vein of veins) {
+      if (auxin.dist(vein.position) < AUXIN_REMOVAL_RADIUS) {
+        to_remove.push(index);
+        break;
+      }
+    }
+  });
 
-    auxins = auxins.filter((_, index) => !to_remove.includes(index));
-    to_remove = [];
+  auxins = auxins.filter((_, index) => !to_remove.includes(index));
+  to_remove = [];
 }
 
 function addAuxins() {
-    for (let i = 0; i < AUXIN_COUNT; i++) {
-        let x = random(0, WIDTH);
-        let y = random(0, HEIGHT);
-        let a = createVector(x, y);
-        auxins.push(a);
-    }
+  for (let i = 0; i < AUXIN_COUNT; i++) {
+    let x = random(0, WIDTH);
+    let y = random(0, HEIGHT);
+    let a = createVector(x, y);
+    auxins.push(a);
+  }
 }
 
 function calculateClosestVeins() {
-    // For each auxin, find the closest vein
-    // Associate that vein with that auxin
-    veins.forEach(vein => {
-        vein.auxins = [];
-    });
-    auxins.forEach(auxin => {
-        let closest_index = 0;
-        for (let index = 1; index < veins.length; index++) {
-            let a = veins[index];
-            let b = veins[closest_index];
-            if (a.position.dist(auxin) < b.position.dist(auxin)) {
-                closest_index = index;
-            }
-        }
+  // For each auxin, find the closest vein
+  // Associate that vein with that auxin
+  veins.forEach((vein) => {
+    vein.auxins = [];
+  });
+  auxins.forEach((auxin) => {
+    let closest_index = 0;
+    for (let index = 1; index < veins.length; index++) {
+      let a = veins[index];
+      let b = veins[closest_index];
+      if (a.position.dist(auxin) < b.position.dist(auxin)) {
+        closest_index = index;
+      }
+    }
 
-        veins[closest_index].auxins.push(auxin);
-    });
+    veins[closest_index].auxins.push(auxin);
+  });
 }
 
 function calculateDirection() {
-    veins.forEach(vein => {
-        vein.direction = createVector(0, 0);
+  veins.forEach((vein) => {
+    vein.direction = createVector(0, 0);
+  });
+  veins.forEach((vein) => {
+    vein.auxins.forEach((auxin) => {
+      vein.direction.add(p5.Vector.sub(auxin, vein.position));
     });
-    veins.forEach(vein => {
-        vein.auxins.forEach(auxin => {
-            vein.direction.add(p5.Vector.sub(auxin, vein.position));
-        });
-        vein.direction.normalize();
-    });
+    vein.direction.normalize();
+  });
 }
 
 function growVeins() {
-    // Grow veins in the direction in which they are being
-    // pulled by the auxins
-    let newVeins = [];
-    veins.forEach(vein => {
-        if (vein.direction.mag() > 0) {
-            let newVein = new Vein(createVector(
-                vein.position.x + vein.direction.x * VEIN_RADIUS * 2,
-                vein.position.y + vein.direction.y * VEIN_RADIUS * 2
-            ));
-            newVeins.push(newVein);
-        }
-    });
-    newVeins.forEach(vein => {
-        veins.push(vein);
-    });
+  // Grow veins in the direction in which they are being
+  // pulled by the auxins
+  let newVeins = [];
+  veins.forEach((vein) => {
+    if (vein.direction.mag() > 0) {
+      let newVein = new Vein(
+        createVector(
+          vein.position.x + vein.direction.x * VEIN_RADIUS * 2,
+          vein.position.y + vein.direction.y * VEIN_RADIUS * 2,
+        ),
+      );
+      newVeins.push(newVein);
+    }
+  });
+  newVeins.forEach((vein) => {
+    veins.push(vein);
+  });
 }
 
 function keyPressed() {
-    if (keyCode === 32) { // Space
-        addAuxins();
-        purgeAuxins();
-        calculateClosestVeins();
-        calculateDirection();
-        growVeins();
-    }
+  if (keyCode === 32) {
+    // Space
+    addAuxins();
+    purgeAuxins();
+    calculateClosestVeins();
+    calculateDirection();
+    growVeins();
+  }
 
-    if (key === 'c') {
-        calculateClosestVeins();
-        showClosest = !showClosest;
-    }
-    if (key === 'r') {
-        showRemovalRadius = !showRemovalRadius;
-    }
-    if (key === 'a') {
-        showAuxins = !showAuxins;
-    }
-    if (key === 'n') {
-        calculateDirection();
-        showDirection = !showDirection;
-    }
+  if (key === "c") {
+    calculateClosestVeins();
+    showClosest = !showClosest;
+  }
+  if (key === "r") {
+    showRemovalRadius = !showRemovalRadius;
+  }
+  if (key === "a") {
+    showAuxins = !showAuxins;
+  }
+  if (key === "n") {
+    calculateDirection();
+    showDirection = !showDirection;
+  }
 
-    return false;
+  return false;
 }
 function setup() {
-    let origin = createVector(WIDTH / 2, HEIGHT * 7 / 8);
-    veins.push(new Vein(origin));
-    addAuxins();
+  let origin = createVector(WIDTH / 2, (HEIGHT * 7) / 8);
+  veins.push(new Vein(origin));
+  addAuxins();
 
-    let numVertices = 50;
-    let delta = 1 / numVertices;
-    t = 0;
-    for (let i = 0; i < numVertices; i++) {
-        let x = bezierPoint(leaf.x1, leaf.x2, leaf.x3, leaf.x4, t);
-        let y = bezierPoint(leaf.y1, leaf.y2, leaf.y3, leaf.y4, t);
-        t = t + delta;
-        leaf.vertices.push({ x, y });
-    }
+  let numVertices = 50;
+  let delta = 1 / numVertices;
+  t = 0;
+  for (let i = 0; i < numVertices; i++) {
+    let x = bezierPoint(leaf.x1, leaf.x2, leaf.x3, leaf.x4, t);
+    let y = bezierPoint(leaf.y1, leaf.y2, leaf.y3, leaf.y4, t);
+    t = t + delta;
+    leaf.vertices.push({ x, y });
+  }
 
-    createCanvas(WIDTH, HEIGHT);
+  createCanvas(WIDTH, HEIGHT);
 }
 
 function draw() {
-    background(BACKGROUND_COLOR);
-    drawLeaf(false);
+  background(BACKGROUND_COLOR);
+  drawLeaf(false);
 
-    if (showAuxins) {
-        auxins.forEach(auxin => {
-            drawCircle(auxin.x, auxin.y, AUXIN_RADIUS, AUXIN_COLOR);
-            if (showRemovalRadius) {
-                drawRing(auxin.x, auxin.y, AUXIN_REMOVAL_RADIUS, AUXIN_COLOR, 2);
-            }
-        });
+  if (showAuxins) {
+    auxins.forEach((auxin) => {
+      drawCircle(auxin.x, auxin.y, AUXIN_RADIUS, AUXIN_COLOR);
+      if (showRemovalRadius) {
+        drawRing(auxin.x, auxin.y, AUXIN_REMOVAL_RADIUS, AUXIN_COLOR, 2);
+      }
+    });
+  }
+
+  veins.forEach((vein) => {
+    drawCircle(vein.position.x, vein.position.y, VEIN_RADIUS, VEIN_COLOR);
+    drawCircle(
+      vein.position.x,
+      vein.position.y,
+      VEIN_RADIUS / 2,
+      VEIN_CORE_COLOR,
+    );
+
+    if (showClosest) {
+      vein.auxins.forEach((auxin) => {
+        drawLine(vein.position, auxin, AUXIN_COLOR, 1, false);
+      });
     }
 
-    veins.forEach(vein => {
-        drawCircle(vein.position.x, vein.position.y, VEIN_RADIUS, VEIN_COLOR);
-        drawCircle(vein.position.x, vein.position.y, VEIN_RADIUS / 2, VEIN_CORE_COLOR);
-
-        if (showClosest) {
-            vein.auxins.forEach(auxin => {
-                drawLine(vein.position, auxin, AUXIN_COLOR, 1, false);
-            });
-        }
-
-        if (showDirection) {
-            drawLine(vein.position, p5.Vector.add(vein.position, p5.Vector.mult(vein.direction, 20)), "purple", 3, true);
-        }
-    });
+    if (showDirection) {
+      drawLine(
+        vein.position,
+        p5.Vector.add(vein.position, p5.Vector.mult(vein.direction, 20)),
+        "purple",
+        3,
+        true,
+      );
+    }
+  });
 }
