@@ -18,6 +18,18 @@ let showClosest = false;
 let showDirection = false;
 let showRemovalRadius = false;
 let showAuxins = false;
+let leaf = {
+    // bezier curve points:
+    x1: WIDTH / 2,
+    y1: HEIGHT * 0.03,
+    x2: -300,
+    y2: HEIGHT + 150,
+    x3: WIDTH + 300,
+    y3: HEIGHT + 150,
+    x4: WIDTH / 2,
+    y4: HEIGHT * 0.03,
+    vertices: [],  // approximation of the bezier curve using a polygon
+}
 
 class Vein {
     constructor(position) {
@@ -58,6 +70,26 @@ function drawLine(v1, v2, color, thickness, drawArrow) {
     //     triangle(v2.x - ARROW_SIZE, v2.y, v2.x, v2.y + ARROW_SIZE / 2, v2.x + ARROW_SIZE, v2.y);
     // }
     pop();
+}
+
+function drawLeaf(drawPolygon) {
+    push();
+    fill(LEAF_COLOR);
+    stroke(LEAF_COLOR);
+    bezier(leaf.x1, leaf.y1, leaf.x2, leaf.y2, leaf.x3, leaf.y3, leaf.x4, leaf.y4);
+    pop();
+
+    if (drawPolygon) {
+        push();
+        noFill();
+        stroke("red");
+        beginShape();
+        for (let p of leaf.vertices) {
+            vertex(p.x, p.y);
+        }
+        endShape(CLOSE);
+        pop();
+    }
 }
 
 function purgeAuxins() {
@@ -160,34 +192,27 @@ function keyPressed() {
 
     return false;
 }
-
-let x1 = WIDTH / 2
-let y1 = HEIGHT * 0.03
-let x2 = -300
-let y2 = HEIGHT + 150
-let x3 = WIDTH + 300
-let y3 = HEIGHT + 150
-let x4 = x1;
-let y4 = y1;
-function drawLeaf() {
-    push();
-    fill(LEAF_COLOR);
-    stroke(LEAF_COLOR);
-    bezier(x1, y1, x2, y2, x3, y3, x4, y4);
-    pop();
-}
-
 function setup() {
     let origin = createVector(WIDTH / 2, HEIGHT * 7 / 8);
     veins.push(new Vein(origin));
     addAuxins();
+
+    let numVertices = 50;
+    let delta = 1 / numVertices;
+    t = 0;
+    for (let i = 0; i < numVertices; i++) {
+        let x = bezierPoint(leaf.x1, leaf.x2, leaf.x3, leaf.x4, t);
+        let y = bezierPoint(leaf.y1, leaf.y2, leaf.y3, leaf.y4, t);
+        t = t + delta;
+        leaf.vertices.push({ x, y });
+    }
 
     createCanvas(WIDTH, HEIGHT);
 }
 
 function draw() {
     background(BACKGROUND_COLOR);
-    drawLeaf();
+    drawLeaf(false);
 
     if (showAuxins) {
         auxins.forEach(auxin => {
@@ -212,10 +237,4 @@ function draw() {
             drawLine(vein.position, p5.Vector.add(vein.position, p5.Vector.mult(vein.direction, 20)), "purple", 3, true);
         }
     });
-
-    let t = 0.5 * sin(frameCount * 0.005) + 0.5;
-    let x = bezierPoint(x1, x2, x3, x4, t);
-    let y = bezierPoint(y1, y2, y3, y4, t);
-    fill(255);
-    circle(x, y, 5);
 }
