@@ -185,6 +185,8 @@ function keyPressed() {
     calculateClosestVeins();
     calculateDirection();
     growVeins();
+    calculateClosestVeins();
+    calculateDirection();
   }
 
   if (key === "c") {
@@ -251,13 +253,15 @@ function draw() {
     }
 
     if (showDirection) {
-      drawLine(
-        vein.position,
-        p5.Vector.add(vein.position, p5.Vector.mult(vein.direction, 20)),
-        "purple",
-        3,
-        true,
-      );
+      if (vein.direction.mag() > 0) {
+        drawLine(
+          vein.position,
+          p5.Vector.add(vein.position, p5.Vector.mult(vein.direction, 20)),
+          "purple",
+          3,
+          true,
+        );
+      }
     }
   });
 }
