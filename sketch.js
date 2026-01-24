@@ -2,21 +2,81 @@ const WIDTH = 400;
 const HEIGHT = 600;
 const BACKGROUND_COLOR = "olivedrab";
 const LEAF_COLOR = "darkgreen";
-const VEIN_RADIUS = 2;
 const VEIN_COLOR = "limegreen";
 const VEIN_CORE_COLOR = "limegreen";
-const AUXIN_COUNT = 3;
-const AUXIN_RADIUS = 2;
+const AUXIN_COUNT = 1;
 const AUXIN_COLOR = "red";
-const AUXIN_REMOVAL_RADIUS = 20;
+const FAST_FORWARD_AMOUNT = 500;
 
-let veins = [];
-let auxins = [];
-let toRemove = [];
-let showClosest = false;
-let showDirection = false;
-let showRemovalRadius = false;
-let showAuxins = true;
+const showAuxinsCheckbox = document.getElementById("showAuxins");
+const showDirectionCheckbox = document.getElementById("showDirection");
+const showRemovalRadiusCheckbox = document.getElementById("showRemovalRadius");
+const showClosestNodeCheckbox = document.getElementById("showClosestNode");
+const veinRadiusSlider = document.getElementById("veinRadius");
+const auxinRadiusSlider = document.getElementById("auxinRadius");
+const auxinRemovalRadiusSlider = document.getElementById("auxinRemovalRadius");
+const resetButton = document.getElementById("reset");
+const stepButton = document.getElementById("step");
+const fastForwardButton = document.getElementById("step500");
+const feedbackDiv = document.getElementById("feedback");
+
+let veins;
+let auxins;
+let toRemove;
+let settings = {
+  veinRadius: veinRadiusSlider.value,
+  auxinRadius: auxinRadiusSlider.value,
+  auxinRemovalRadius: auxinRemovalRadiusSlider.value,
+  showClosestNode: showClosestNodeCheckbox.checked,
+  showDirection: showDirectionCheckbox.checked,
+  showRemovalRadius: showRemovalRadiusCheckbox.checked,
+  showAuxins: showAuxinsCheckbox.checked,
+};
+
+showAuxinsCheckbox.addEventListener("change", (e) => {
+  settings.showAuxins = e.target.checked;
+  redraw();
+});
+showDirectionCheckbox.addEventListener("change", (e) => {
+  settings.showDirection = e.target.checked;
+  redraw();
+});
+showRemovalRadiusCheckbox.addEventListener("change", (e) => {
+  settings.showRemovalRadius = e.target.checked;
+  redraw();
+});
+showClosestNodeCheckbox.addEventListener("change", (e) => {
+  settings.showClosestNode = e.target.checked;
+  redraw();
+});
+veinRadiusSlider.addEventListener("input", (e) => {
+  settings.veinRadius = e.target.value;
+  redraw();
+});
+auxinRadiusSlider.addEventListener("input", (e) => {
+  settings.auxinRadius = e.target.value;
+  redraw();
+});
+auxinRemovalRadiusSlider.addEventListener("input", (e) => {
+  settings.auxinRemovalRadius = e.target.value;
+  redraw();
+});
+
+resetButton.addEventListener("click", () => {
+  initState();
+  redraw();
+});
+fastForwardButton.addEventListener("click", () => {
+  for (let i = 0; i < FAST_FORWARD_AMOUNT; i++) {
+    doSimulationStep();
+  }
+  redraw();
+});
+stepButton.addEventListener("click", () => {
+  doSimulationStep();
+  redraw();
+});
+
 let leaf = {
   // bezier curve points:
   x1: WIDTH / 2,
@@ -102,10 +162,10 @@ function drawLeaf(drawPolygon) {
 }
 
 function purgeAuxins() {
-  // Remove any auxins that are within AUXIN_REMOVAL_RADIUS of any vein
+  // Remove any auxins that are within settings.auxinRemovalRadius of any vein
   auxins.forEach((auxin, index) => {
     for (const vein of veins) {
-      if (auxin.dist(vein.position) < AUXIN_REMOVAL_RADIUS) {
+      if (auxin.dist(vein.position) < settings.auxinRemovalRadius) {
         toRemove.push(index);
         break;
       }
@@ -205,8 +265,8 @@ function growVeins() {
     if (vein.direction.mag() > 0) {
       let newVein = new Vein(
         createVector(
-          vein.position.x + vein.direction.x * VEIN_RADIUS * 2,
-          vein.position.y + vein.direction.y * VEIN_RADIUS * 2,
+          vein.position.x + vein.direction.x * settings.veinRadius * 2,
+          vein.position.y + vein.direction.y * settings.veinRadius * 2,
         ),
       );
       newVeins.push(newVein);
@@ -217,34 +277,28 @@ function growVeins() {
   });
 }
 
+function doSimulationStep() {
+  addAuxins();
+  purgeAuxins();
+  calculateClosestVeins();
+  calculateDirection();
+  growVeins();
+  calculateClosestVeins();
+  calculateDirection();
+}
 function keyPressed() {
+  // On Space
   if (keyCode === 32) {
-    // Space
-    addAuxins();
-    purgeAuxins();
-    calculateClosestVeins();
-    calculateDirection();
-    growVeins();
-    calculateClosestVeins();
-    calculateDirection();
+    doSimulationStep();
   }
-
-  if (key === "c") {
-    showClosest = !showClosest;
-  }
-  if (key === "r") {
-    showRemovalRadius = !showRemovalRadius;
-  }
-  if (key === "a") {
-    showAuxins = !showAuxins;
-  }
-  if (key === "n") {
-    showDirection = !showDirection;
-  }
-
+  redraw();
   return false;
 }
-function setup() {
+
+function initState() {
+  veins = [];
+  auxins = [];
+  toRemove = [];
   let numVertices = 30;
   let delta = 1 / numVertices;
   t = 0;
@@ -257,38 +311,48 @@ function setup() {
 
   let origin = createVector(WIDTH / 2, (HEIGHT * 7) / 8);
   veins.push(new Vein(origin));
-  createCanvas(WIDTH, HEIGHT);
+}
+
+function setup() {
+  initState();
+  createCanvas(WIDTH, HEIGHT, document.getElementById("sketch"));
+  noLoop();
 }
 
 function draw() {
   background(BACKGROUND_COLOR);
   drawLeaf(false);
 
-  if (showAuxins) {
+  if (settings.showAuxins) {
     auxins.forEach((auxin) => {
-      drawCircle(auxin.x, auxin.y, AUXIN_RADIUS, AUXIN_COLOR);
-      if (showRemovalRadius) {
-        drawRing(auxin.x, auxin.y, AUXIN_REMOVAL_RADIUS, AUXIN_COLOR, 2);
+      drawCircle(auxin.x, auxin.y, settings.auxinRadius, AUXIN_COLOR);
+      if (settings.showRemovalRadius) {
+        drawRing(auxin.x, auxin.y, settings.auxinRemovalRadius, AUXIN_COLOR, 2);
       }
     });
   }
 
   veins.forEach((vein) => {
-    drawCircle(vein.position.x, vein.position.y, VEIN_RADIUS, VEIN_COLOR);
     drawCircle(
       vein.position.x,
       vein.position.y,
-      VEIN_RADIUS / 2,
+      settings.veinRadius,
+      VEIN_COLOR,
+    );
+    drawCircle(
+      vein.position.x,
+      vein.position.y,
+      settings.veinRadius / 2,
       VEIN_CORE_COLOR,
     );
 
-    if (showClosest) {
+    if (settings.showClosestNode) {
       vein.auxins.forEach((auxin) => {
         drawLine(vein.position, auxin, AUXIN_COLOR, 1, false);
       });
     }
 
-    if (showDirection) {
+    if (settings.showDirection) {
       if (vein.direction.mag() > 0) {
         drawLine(
           vein.position,

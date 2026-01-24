@@ -1,14 +1,84 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>leaf-venation</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css" />
     <script src="https://cdn.jsdelivr.net/npm/p5@2.1.1/lib/p5.min.js"></script>
-    
-</head>
-<body>
+    <style>
+      #settings {
+        margin-right: 1em;
+        max-width: 180px;
+      }
+      #settingsHeader {
+        font-weight: bold;
+        margin-bottom: 0.25em;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="settings">
+      <div id="settingsHeader">Settings:</div>
+      <div>
+        <input type="checkbox" name="showAuxins" id="showAuxins" />
+        <label for="showAuxins">Show Auxins</label>
+      </div>
+      <div>
+        <input type="checkbox" name="showDirection" id="showDirection" />
+        <label for="showDirection">Show Growth Direction</label>
+      </div>
+      <div>
+        <input
+          type="checkbox"
+          name="showRemovalRadius"
+          id="showRemovalRadius"
+        />
+        <label for="showRemovalRadius">Show Removal Radius</label>
+      </div>
+      <div>
+        <input type="checkbox" name="showClosestNode" id="showClosestNode" />
+        <label for="showClosestNode">Show Closest Node</label>
+      </div>
+      <div>
+        <label for="veinRadius">Vein Radius</label>
+        <input
+          type="range"
+          id="veinRadius"
+          value="2"
+          min="1"
+          max="10"
+          step="1"
+        />
+      </div>
+      <div>
+        <label for="auxinRadius">Auxin Radius</label>
+        <input
+          type="range"
+          id="auxinRadius"
+          value="2"
+          min="1"
+          max="10"
+          step="1"
+        />
+      </div>
+      <div>
+        <label for="auxinRemovalRadius">Auxin Removal Radius</label>
+        <input
+          type="range"
+          id="auxinRemovalRadius"
+          value="30"
+          min="5"
+          max="100"
+          step="5"
+        />
+      </div>
+      <button id="step">One Step</button>
+      <button id="step500">500 Steps</button>
+      <button id="reset">Reset</button>
+    </div>
+    <canvas id="sketch"></canvas>
+
     <script src="sketch.js"></script>
-</body>
+  </body>
 </html>
