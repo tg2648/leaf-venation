@@ -18,7 +18,6 @@ const auxinRemovalRadiusSlider = document.getElementById("auxinRemovalRadius");
 const resetButton = document.getElementById("reset");
 const stepButton = document.getElementById("step");
 const fastForwardButton = document.getElementById("step500");
-const feedbackDiv = document.getElementById("feedback");
 
 let veins;
 let auxins;
@@ -315,7 +314,8 @@ function initState() {
 
 function setup() {
   initState();
-  createCanvas(WIDTH, HEIGHT, document.getElementById("sketch"));
+  let canvas = createCanvas(WIDTH, HEIGHT);
+  canvas.parent("canvas-container");
   noLoop();
 }
 
